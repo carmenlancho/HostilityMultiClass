@@ -30,7 +30,7 @@ def hostility_measure_multiclass(sigma, X, y, k_min, seed=0):
     :return: host_instance_by_layer - df with hostility instance values per layer (cols are number of clusters per layer, rows are points)
              data_clusters - original data and the cluster to which every original point belongs to at any layer
              results - dataframe (rows are number of clusters per layer) with hostility per class, per dataset and overlap per class
-             results_per_class - Pairwise hostility per classes. Rows: who is receiving hostility, columns: who is causing the hostility
+             results_per_class - Pairwise hostility per classes. Rows: who is receiving hostility, columns: who is causing the hostility (proportion of points (row) receiving hostility from the class in the column)
              probs_per_layer - dominance probability of each class in the neighborhood of each point for each layer
              k_auto - automatic recommended value of clusters k for selecting the best layer to stop
     """
