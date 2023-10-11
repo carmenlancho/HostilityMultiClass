@@ -6,15 +6,13 @@
 # root_path = '/home/carmen/PycharmProjects/Doctorado'
 
 
-from scipy.stats import multivariate_normal
-import matplotlib.pyplot as plt
+
+
 import copy
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
 from Normal_dataset_generator import *
-
-
 
 
 
