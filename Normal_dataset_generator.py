@@ -4,6 +4,7 @@
 from scipy.stats import multivariate_normal
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 
 def normal_generator2(mu0, sigma0, n0, mu1, sigma1, n1, seed1, seed2):

@@ -12,7 +12,7 @@ import copy
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
-from scipy.stats import multivariate_normal
+# from scipy.stats import multivariate_normal
 from Normal_dataset_generator import *
 
 
