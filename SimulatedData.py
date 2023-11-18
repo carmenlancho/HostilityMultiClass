@@ -78,5 +78,6 @@ k_min = 0
 host_instance_by_layer_df, data_clusters, results, results_per_class, probs_per_layer, k_auto = hostility_measure_multiclass(sigma, X, y, k_min, seed=0)
 
 
-
+## hacer un ejemplo con una normal dentro de otra totalmente
+# una clase que solape con todo
 
