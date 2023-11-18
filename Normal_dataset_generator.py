@@ -72,3 +72,44 @@ def normal_generator3(mu0, sigma0, n0, mu1, sigma1, n1, mu2, sigma2, n2, seed0, 
     return X, y
 
 
+
+
+
+def normal_generator4(mu0, sigma0, n0, mu1, sigma1, n1, mu2, sigma2, n2, mu3, sigma3, n3, seed0, seed1, seed2, seed3):
+    mn0 = multivariate_normal(mean=mu0, cov=sigma0)
+    X0 = mn0.rvs(size=n0, random_state=seed0)
+
+    mn1 = multivariate_normal(mean=mu1, cov=sigma1)
+    X1 = mn1.rvs(size=n1, random_state=seed1)
+
+    mn2 = multivariate_normal(mean=mu2, cov=sigma2)
+    X2 = mn2.rvs(size=n2, random_state=seed2)
+
+    mn3 = multivariate_normal(mean=mu3, cov=sigma3)
+    X3 = mn3.rvs(size=n3, random_state=seed3)
+
+    X = np.vstack((X0, X1, X2, X3))
+    y = np.array([0] * len(X0) + [1] * len(X1) + [2] * len(X2) + [3] * len(X3))
+
+    data = pd.DataFrame(X, columns=['x', 'y'])
+
+    # Plot
+
+    labels = list(data.index)
+    idx_1 = np.where(y == 1)
+    idx_0 = np.where(y == 0)
+    idx_2 = np.where(y == 2)
+    idx_3 = np.where(y == 3)
+    plt.scatter(data.iloc[idx_0].x, data.iloc[idx_0].y, s=70, c='k', marker=".", label='0')
+    plt.scatter(data.iloc[idx_1].x, data.iloc[idx_1].y, s=70, c='c', marker="+", label='1')
+    plt.scatter(data.iloc[idx_2].x, data.iloc[idx_2].y, s=70, c='purple', marker="*", label='2')
+    plt.scatter(data.iloc[idx_3].x, data.iloc[idx_3].y, s=30, c='orange', marker="h", label='3')
+
+    plt.xticks([])
+    plt.yticks([])
+    plt.show()
+
+    return X, y
+
+
+
