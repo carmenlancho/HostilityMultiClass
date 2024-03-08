@@ -153,6 +153,7 @@ def hostility_measure_multiclass_ewkm(sigma, X, y, k_min, seed=0):
         dict_f_w = {}
 
         h = 1  # to identify the layer
+        # k =69
         for k in k_list:
 
             # kmeds_kmeans = KMeans(n_clusters=k, n_init=15, random_state=seed).fit(X_aux) # kmeans
@@ -171,6 +172,7 @@ def hostility_measure_multiclass_ewkm(sigma, X, y, k_min, seed=0):
 
             if len(y) == len(labels_bomb1):  # only first k-means
                 data_clusters[col_now] = labels_bomb1
+                len(labels_bomb1)
                 # Probability of being correctly identified derived from first k-means
                 table_percen = pd.crosstab(y, labels_bomb1, normalize='columns')
                 table_percen_df = pd.DataFrame(table_percen)
@@ -327,3 +329,15 @@ def feature_weight_Host(dict_f_w):
 
     return
 # https://stackoverflow.com/questions/51087522/combine-histogram-with-describe-in-python
+
+# from sklearn import preprocessing
+# import os
+#
+# root_path = os.getcwd()
+#
+# path_csv = os.chdir(root_path+'/HostilityMultiClass/datasets')
+# df = pd.read_csv('bupa.csv')
+# X = df.iloc[:,:-1].to_numpy() # all variables except y
+# X = preprocessing.scale(X)
+# y = df[df.columns[-1]].to_numpy()
+#
