@@ -140,7 +140,7 @@ def hostility_measure(sigma, X, y, delta, k_min, seed=0):
 
 
 # #Example
-# from Artificial_data.Bivariate_ArtificialData import normal_generator2
+from Normal_dataset_generator import normal_generator2
 #
 # Parameters
 seed1 = 1
