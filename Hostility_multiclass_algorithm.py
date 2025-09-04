@@ -204,7 +204,7 @@ def hostility_measure_multiclass(sigma, X, y, k_min, seed=0):
 
 #Example
 
-
+#
 # # Parameters
 # seed1 = 1
 # seed2 = 2
@@ -218,7 +218,7 @@ def hostility_measure_multiclass(sigma, X, y, k_min, seed=0):
 # sigma1 = [[1, 0], [0, 1]]
 #
 # X, y = normal_generator2(mu0, sigma0, n0, mu1, sigma1, n1, seed1, seed2)
-
+#
 #
 #
 # seed0 = 1
