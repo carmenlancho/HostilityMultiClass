@@ -61,9 +61,9 @@ def normal_generator3(mu0, sigma0, n0, mu1, sigma1, n1, mu2, sigma2, n2, seed0, 
     idx_1 = np.where(y == 1)
     idx_0 = np.where(y == 0)
     idx_2 = np.where(y == 2)
-    plt.scatter(data.iloc[idx_0].x, data.iloc[idx_0].y, s=30, c='k', marker=".", label='0')
-    plt.scatter(data.iloc[idx_1].x, data.iloc[idx_1].y, s=30, c='c', marker="+", label='1')
-    plt.scatter(data.iloc[idx_2].x, data.iloc[idx_2].y, s=30, c='purple', marker="*", label='2')
+    plt.scatter(data.iloc[idx_0].x, data.iloc[idx_0].y, s=30, c='#040082', marker=".", label='0')
+    plt.scatter(data.iloc[idx_1].x, data.iloc[idx_1].y, s=30, c='C1', marker="+", label='1')
+    plt.scatter(data.iloc[idx_2].x, data.iloc[idx_2].y, s=30, c='#96DBF2', marker="*", label='2')
 
     plt.xticks([])
     plt.yticks([])
