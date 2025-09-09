@@ -235,7 +235,7 @@ def hostility_measure_multiclass_Centroids(sigma, X, y, k_min, seed=0):
 
 
 # Hostility measure algorithm
-def hostility_measure(sigma, X, y, delta, k_min, seed=0):
+def hostility_measure_Centroids(sigma, X, y, delta, k_min, seed=0):
     """
     :param sigma: proportion of grouped points per cluster. This parameter automatically determines the number of clusters k in every layer.
     :param X: instances
@@ -284,7 +284,8 @@ def hostility_measure(sigma, X, y, delta, k_min, seed=0):
 
         # Results is a dataset to save hostility per class, hostility of the dataset and overlap per class in every layer
         index = k_list
-        results = pd.DataFrame(0, columns=columns_v, index=index)
+        results = pd.DataFrame(0.0, columns=columns_v, index=index)
+        # ponemos 0.0 para que se inicialice como float y no como int
 
         data_clusters = pd.DataFrame(X)  # to save to which cluster every original point belongs to at any layer
         prob_bomb = np.zeros(len(X))  # to save the probability, for every original point, of its class in its cluster
@@ -394,10 +395,10 @@ sigma = 5
 delta = 0.5
 seed = 0
 k_min = 0
-host_instance_by_layer_df, data_clusters, centroids_dict, results, k_auto = hostility_measure(sigma, X, y, delta, k_min, seed=0)
+host_instance_by_layer_df, data_clusters, centroids_dict, results, k_auto = hostility_measure_Centroids(sigma, X, y, delta, k_min, seed=0)
 # host_instance_by_layer_df me devuelve la hostilidad de cada punto en cada capa
 # con esto puedo sacar (mediante binarización) la hostilidad de cada clase en cada mini cluster
-# para ir trackeando la evoluación
+# para ir trackeando la evolución
 
 
 
