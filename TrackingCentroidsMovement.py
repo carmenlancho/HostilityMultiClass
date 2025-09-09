@@ -399,8 +399,61 @@ host_instance_by_layer_df, data_clusters, centroids_dict, results, k_auto = host
 # host_instance_by_layer_df me devuelve la hostilidad de cada punto en cada capa
 # con esto puedo sacar (mediante binarización) la hostilidad de cada clase en cada mini cluster
 # para ir trackeando la evolución
+# con eso, debo estudiar cómo cambia la complejidad al moverse cada cluster
 
 
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Ejemplo inventado
+# Centroides de capa 0 y capa 1
+centroids_0 = np.array([[1, 1], [3, 2], [2, 4]])
+complexity_0 = np.array([0.5, 0.8, 0.3])
+
+centroids_1 = np.array([[2, 2], [2.5, 3]])
+complexity_1 = np.array([0.6, 0.4])
+
+# --- Ahora: necesitas saber qué centroides "viejos" se agrupan en qué centroides nuevos ---
+# Si ya tienes esa jerarquía (ej: etiquetas de asignación), perfecto.
+# Aquí simulamos una asignación:
+assignment = [0, 0, 1]  # cada cluster viejo se reasigna a un cluster nuevo
+
+# Construir vectores de movimiento
+X = []
+Y = []
+U = []
+V = []
+colors = []
+
+for i, old_c in enumerate(centroids_0):
+    new_c = centroids_1[assignment[i]]
+
+    # Origen (viejo centroide)
+    X.append(old_c[0])
+    Y.append(old_c[1])
+
+    # Desplazamiento
+    U.append(new_c[0] - old_c[0])
+    V.append(new_c[1] - old_c[1])
+
+    # Cambio de complejidad
+    delta_c = complexity_1[assignment[i]] - complexity_0[i]
+    if delta_c > 0:
+        colors.append("red")  # aumentó
+    else:
+        colors.append("blue")  # disminuyó
+
+# Dibujar
+plt.figure(figsize=(6, 6))
+plt.quiver(X, Y, U, V, angles="xy", scale_units="xy", scale=1, color=colors)
+
+# Marcar centroides
+plt.scatter(centroids_0[:, 0], centroids_0[:, 1], c="gray", marker="o", label="Viejos")
+plt.scatter(centroids_1[:, 0], centroids_1[:, 1], c="black", marker="x", label="Nuevos")
+
+plt.legend()
+plt.axis("equal")
+plt.show()
 
 
 
