@@ -524,7 +524,7 @@ def plot_hierarchical_quivers_with_complexity(df,
         # añadir barra de color
         sm = mpl.cm.ScalarMappable(cmap=cmap, norm=norm)
         sm.set_array([])
-        plt.colorbar(sm, ax=ax, fraction=0.046, pad=0.04, label="Δ complejidad")
+        plt.colorbar(sm, ax=ax, fraction=0.046, pad=0.04, label="∆ complejidad")
 
     plt.tight_layout()
     plt.show()
