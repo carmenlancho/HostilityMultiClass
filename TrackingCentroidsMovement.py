@@ -14,6 +14,8 @@ import pandas as pd
 from sklearn.cluster import KMeans
 # from scipy.stats import multivariate_normal
 from Normal_dataset_generator import *
+import matplotlib.pyplot as plt
+import matplotlib as mpl
 
 
 
@@ -402,58 +404,126 @@ host_instance_by_layer_df, data_clusters, centroids_dict, results, k_auto = host
 # con eso, debo estudiar cómo cambia la complejidad al moverse cada cluster
 
 
-import numpy as np
-import matplotlib.pyplot as plt
+###############################################################################################
+###########                    MAPA VECTORIAL MOVIMIENTO CENTROIDES                 ###########
+###############################################################################################
 
-# Ejemplo inventado
-# Centroides de capa 0 y capa 1
-centroids_0 = np.array([[1, 1], [3, 2], [2, 4]])
-complexity_0 = np.array([0.5, 0.8, 0.3])
 
-centroids_1 = np.array([[2, 2], [2.5, 3]])
-complexity_1 = np.array([0.6, 0.4])
 
-# --- Ahora: necesitas saber qué centroides "viejos" se agrupan en qué centroides nuevos ---
-# Si ya tienes esa jerarquía (ej: etiquetas de asignación), perfecto.
-# Aquí simulamos una asignación:
-assignment = [0, 0, 1]  # cada cluster viejo se reasigna a un cluster nuevo
+def plot_hierarchical_quivers_with_complexity(df,
+                                              centroids_dict,
+                                              host_instance_by_layer_df,
+                                              delta=0.5,
+                                              cluster_prefix='cluster_',
+                                              annotate=False,
+                                              figsize=(18,5),
+                                              arrow_scale=1,
+                                              arrow_width=0.005,
+                                              cmap_name="coolwarm"):
 
-# Construir vectores de movimiento
-X = []
-Y = []
-U = []
-V = []
-colors = []
+    """
+    Dibuja un quiver plot por cada par de capas consecutivas en df.
 
-for i, old_c in enumerate(centroids_0):
-    new_c = centroids_1[assignment[i]]
+    Parámetros
+    ----------
+    df : data_clusters`
+    centroids_dict : Diccionario con centroides
+    cluster_prefix : Prefijo de columnas de cluster ('cluster_').
+    annotate : bool
+        Si True, escribe los ids de cluster.
+    figsize, arrow_scale, arrow_width, cmap_name : parámetros de plotting.
+    """
 
-    # Origen (viejo centroide)
-    X.append(old_c[0])
-    Y.append(old_c[1])
+    cluster_cols = [c for c in df.columns if str(c).startswith(cluster_prefix)]
+    n_layers = len(cluster_cols)
+    if n_layers < 2:
+        raise ValueError("The minimum number of layers to generate a quiver plot is 2.")
 
-    # Desplazamiento
-    U.append(new_c[0] - old_c[0])
-    V.append(new_c[1] - old_c[1])
+    # Binarizar host_instance para el posterior cálculo de complejidad por clase
+    host_bin = (host_instance_by_layer_df >= delta).astype(int)
 
-    # Cambio de complejidad
-    delta_c = complexity_1[assignment[i]] - complexity_0[i]
-    if delta_c > 0:
-        colors.append("red")  # aumentó
-    else:
-        colors.append("blue")  # disminuyó
+    fig, axes = plt.subplots(1, n_layers-1, figsize=figsize, squeeze=False)
+    axes = axes[0]
 
-# Dibujar
-plt.figure(figsize=(6, 6))
-plt.quiver(X, Y, U, V, angles="xy", scale_units="xy", scale=1, color=colors)
+    for i, ax in enumerate(axes):
+        l = i + 1
+        col_l = f"{cluster_prefix}{l}"
+        col_next = f"{cluster_prefix}{l+1}"
 
-# Marcar centroides
-plt.scatter(centroids_0[:, 0], centroids_0[:, 1], c="gray", marker="o", label="Viejos")
-plt.scatter(centroids_1[:, 0], centroids_1[:, 1], c="black", marker="x", label="Nuevos")
+        # complejidad media por cluster en capa l y l+1
+        comp_old = (host_bin.iloc[:, l - 1].groupby(df[col_l]).mean().to_dict())
+        comp_new = (host_bin.iloc[:, l].groupby(df[col_next]).mean().to_dict())
 
-plt.legend()
-plt.axis("equal")
-plt.show()
+        # vectores
+        X, Y, U, V, colors = [], [], [], [], []
+        labels_old, labels_new = [], []
 
+        unique_old = np.unique(df[col_l].dropna().values)
+
+        for old_label in unique_old: # recorremos todos los clusters
+            mask_old = df[col_l] == old_label # nos quedamos con la posición de dichas observaciones
+
+            # nuevo label: buscamos su nueva etiqueta en el cluster siguiente
+            # elegimos la primera observación (por ejemlo), son todas iguales
+            new_label = df.loc[mask_old, col_next].iloc[0]
+
+            cent_arr_old = centroids_dict.get(l) # centroides del cluster previo
+            old_cent = cent_arr_old[int(old_label)] # centroide
+
+            # obtener centroid nuevo
+            cent_arr_new = centroids_dict.get(l+1)
+            new_cent = cent_arr_new[int(new_label)]
+
+            X.append(float(old_cent[0])); Y.append(float(old_cent[1]))
+            U.append(float(new_cent[0] - old_cent[0])); V.append(float(new_cent[1] - old_cent[1]))
+            labels_old.append(old_label); labels_new.append(new_label)
+
+            # cambio de complejidad
+            c_old = comp_old.get(old_label, 0)
+            c_new = comp_new.get(new_label, 0)
+            colors.append(c_new - c_old) # degradado con cmap
+            # color binario
+            # if c_new > c_old:
+            #     colors.append("darkred")
+            # else :
+            #     colors.append("green")
+
+        X, Y, U, V, colors = map(np.array, [X, Y, U, V, colors])
+        # mapa de colores
+        norm = mpl.colors.TwoSlopeNorm(vmin=colors.min(), vcenter=0, vmax=colors.max())
+        cmap = plt.get_cmap(cmap_name)
+
+        # Dibujar
+        ax.quiver(X, Y, U, V,colors, angles='xy', scale_units='xy', scale=arrow_scale,
+                  width=arrow_width, cmap=cmap, norm=norm, alpha=0.9)
+
+        # Por si se quieren pintar los centroides
+        # ax.scatter(X, Y, s=10, alpha=0.6, label='old centroids')
+        # ax.scatter(np.array(X)+np.array(U), np.array(Y)+np.array(V),
+        #            s=10, marker='x', alpha=0.6, label='new centroids')
+
+        ax.set_title(f"Layer {l} → {l+1}")
+        ax.axis('equal')
+        # ax.legend(fontsize='small')
+
+        if annotate:
+            for xo, yo, dx, dy, oldl, newl in zip(X, Y, U, V, labels_old, labels_new):
+                ax.text(xo, yo, str(oldl), fontsize=6, va='bottom', ha='right')
+                ax.text(xo+dx, yo+dy, str(newl), fontsize=6, va='bottom', ha='left')
+
+        # añadir barra de color
+        sm = mpl.cm.ScalarMappable(cmap=cmap, norm=norm)
+        sm.set_array([])
+        plt.colorbar(sm, ax=ax, fraction=0.046, pad=0.04, label="Δ complejidad")
+
+    plt.tight_layout()
+    plt.show()
+
+
+plot_hierarchical_quivers_with_complexity(
+    data_clusters,
+    centroids_dict,
+    host_instance_by_layer_df,
+    delta=0.5)
 
 
