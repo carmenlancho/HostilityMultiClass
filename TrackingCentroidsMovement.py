@@ -415,6 +415,7 @@ def plot_hierarchical_quivers_with_complexity(df,
                                               host_instance_by_layer_df,
                                               delta=0.5,
                                               cluster_prefix='cluster_',
+                                              k_auto=None,
                                               annotate=False,
                                               figsize=(18,5),
                                               arrow_scale=1,
@@ -435,9 +436,18 @@ def plot_hierarchical_quivers_with_complexity(df,
     """
 
     cluster_cols = [c for c in df.columns if str(c).startswith(cluster_prefix)]
+    # si hay k_auto, cortar en esa capa
+    if k_auto is not None:
+        n_clusters_per_layer = [df[c].nunique() for c in cluster_cols]
+        arr = np.array(n_clusters_per_layer)
+        if (arr == k_auto).any():
+            layer_limit = np.where(arr == k_auto)[0][0] + 1
+            cluster_cols = cluster_cols[:layer_limit]
+
     n_layers = len(cluster_cols)
     if n_layers < 2:
         raise ValueError("The minimum number of layers to generate a quiver plot is 2.")
+
 
     # Binarizar host_instance para el posterior cálculo de complejidad por clase
     host_bin = (host_instance_by_layer_df >= delta).astype(int)
@@ -524,6 +534,7 @@ plot_hierarchical_quivers_with_complexity(
     data_clusters,
     centroids_dict,
     host_instance_by_layer_df,
-    delta=0.5)
+    delta=0.5,
+    k_auto=k_auto)
 
 
