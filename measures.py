@@ -215,7 +215,7 @@ class ClassificationMeasures:
 
         nb = GaussianNB(priors=priors)
         self.calibrated_nb = CalibratedClassifierCV(estimator=nb, method='sigmoid',
-                                                    cv=3, ensemble=False, n_jobs=-1)
+                                                    cv=3, n_jobs=-1)
         self.calibrated_nb.fit(self.X, self.y)
 
         # Gower distance matrix
