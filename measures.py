@@ -214,7 +214,7 @@ class ClassificationMeasures:
         priors = np.ones((n_c,)) / n_c
 
         nb = GaussianNB(priors=priors)
-        self.calibrated_nb = CalibratedClassifierCV(base_estimator=nb, method='sigmoid',
+        self.calibrated_nb = CalibratedClassifierCV(estimator=nb, method='sigmoid',
                                                     cv=3, ensemble=False, n_jobs=-1)
         self.calibrated_nb.fit(self.X, self.y)
 
