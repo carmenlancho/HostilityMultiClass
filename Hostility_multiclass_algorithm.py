@@ -74,13 +74,13 @@ def hostility_measure_multiclass(sigma, X, y, k_min, seed=0):
 
         # Results is a dataset to save hostility per class, hostility of the dataset and overlap per class in every layer
         index = k_list
-        results = pd.DataFrame(0, columns=columns_v, index=index)
+        results = pd.DataFrame(0.0, columns=columns_v, index=index)
         results_per_class = {}
         probs_per_layer = {}
 
         data_clusters = pd.DataFrame(X)  # to save to which cluster every original point belongs to at any layer
         # prob_bomb = np.zeros(len(X))  # to save the probability, for every original point, of its class in its cluster
-        df_bomb = pd.DataFrame(0,columns=list_classes, index=data_clusters.index)
+        df_bomb = pd.DataFrame(0.0,columns=list_classes, index=data_clusters.index)
 
         h = 1  # to identify the layer
         for k in k_list:
