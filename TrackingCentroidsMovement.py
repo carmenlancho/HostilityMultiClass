@@ -379,25 +379,25 @@ def hostility_measure_Centroids(sigma, X, y, delta, k_min, seed=0):
 #Example
 
 
-# # Parameters
-# seed1 = 1
-# seed2 = 2
-# n0 = 3000
-# n1 = 3000
-#
-# # Dataset 1
-# mu0 = [0, 0]
-# sigma0 = [[1, 0], [0, 1]]
-# mu1 = [3, 3]
-# sigma1 = [[1, 0], [0, 1]]
-#
-# X, y = normal_generator2(mu0, sigma0, n0, mu1, sigma1, n1, seed1, seed2)
-#
-# sigma = 5
-# delta = 0.5
-# seed = 0
-# k_min = 0
-# host_instance_by_layer_df, data_clusters, centroids_dict, results, k_auto = hostility_measure_Centroids(sigma, X, y, delta, k_min, seed=0)
+# Parameters
+seed1 = 1
+seed2 = 2
+n0 = 3000
+n1 = 3000
+
+# Dataset 1
+mu0 = [0, 0]
+sigma0 = [[1, 0], [0, 1]]
+mu1 = [3, 3]
+sigma1 = [[1, 0], [0, 1]]
+
+X, y = normal_generator2(mu0, sigma0, n0, mu1, sigma1, n1, seed1, seed2)
+
+sigma = 5
+delta = 0.5
+seed = 0
+k_min = 0
+host_instance_by_layer_df, data_clusters, centroids_dict, results, k_auto = hostility_measure_Centroids(sigma, X, y, delta, k_min, seed=0)
 # host_instance_by_layer_df me devuelve la hostilidad de cada punto en cada capa
 # con esto puedo sacar (mediante binarización) la hostilidad de cada clase en cada mini cluster
 # para ir trackeando la evolución
@@ -538,3 +538,318 @@ def plot_hierarchical_quivers_with_complexity(df,
 #     k_auto=k_auto)
 
 
+import numpy as np
+import pandas as pd
+
+
+def rank_features_by_centroid_complexity(
+        df,
+        centroids_dict,
+        host_instance_by_layer_df,
+        delta=0.001,
+        cluster_prefix='cluster_',
+        k_auto=None
+):
+    """
+    Calcula un score por feature basado en el movimiento de centroides y cambio
+    de complejidad de clusters. Menor score = variable más útil (reduce complejidad).
+
+    Retorna:
+        scores: dict {feature_index: score}
+        ranking: list de features ordenados por score (menor → mejor)
+    """
+
+    # --- 1. Detectar capas útiles ---
+    cluster_cols = [c for c in df.columns if str(c).startswith(cluster_prefix)]
+    # cluster_cols = sorted(cluster_cols, key=lambda x: int(x.split('_')[1]))
+
+    if k_auto is not None:
+        n_clusters_per_layer = [df[c].nunique() for c in cluster_cols]
+        arr = np.array(n_clusters_per_layer)
+        if (arr == k_auto).any():
+            layer_limit = np.where(arr == k_auto)[0][0] + 1
+            cluster_cols = cluster_cols[:layer_limit]
+        else:
+            raise ValueError(f"No se encontró ninguna capa con {k_auto} clusters en data_clusters.")
+    n_layers = len(cluster_cols)
+
+    # --- 2. Binarizar complejidad ---
+    host_bin = (host_instance_by_layer_df >= delta).astype(int)
+
+    feature_cols = [c for c in df.columns if not str(c).startswith(cluster_prefix)]
+    n_features = len(feature_cols)
+    scores = np.zeros(n_features)  # uno por feature
+
+    # --- 3. Complejidad media por cluster ---
+    comp_by_cluster = {}
+    for l_idx, col in enumerate(cluster_cols, start=1):
+        comp_by_cluster[l_idx] = host_bin.iloc[:, l_idx - 1].groupby(df[col]).mean().to_dict()
+
+    # --- 4. Recorrer transiciones de capa ---
+    for l in range(1, n_layers):
+        col_l = f"{cluster_prefix}{l}"
+        col_next = f"{cluster_prefix}{l + 1}"
+
+        unique_old = np.unique(df[col_l].dropna())
+
+        for old_label in unique_old:
+            mask_old = df[col_l] == old_label
+            if not mask_old.any():
+                continue
+
+            new_label = df.loc[mask_old, col_next].iloc[0]
+
+            # centroides
+            old_cent = centroids_dict[l][int(old_label)]
+            new_cent = centroids_dict[l + 1][int(new_label)]
+
+            delta_cent = np.abs(new_cent - old_cent)
+
+            # cambio de complejidad
+            c_old = comp_by_cluster[l].get(old_label, 0)
+            c_new = comp_by_cluster[l + 1].get(new_label, 0)
+            delta_comp = c_new - c_old
+
+            # acumular score por feature
+            scores += delta_cent * delta_comp
+
+    # --- 5. Normalización opcional ---
+    scores /= (np.abs(scores).sum() + 1e-10)  # evita división por cero
+
+    # --- 6. Ranking ---
+    feature_indices = np.arange(len(scores))
+    ranking = [x for _, x in sorted(zip(scores, feature_indices))]
+
+    return dict(zip(feature_indices, scores)), ranking
+
+
+
+scores, ranking = rank_features_by_centroid_complexity(data_clusters,centroids_dict,host_instance_by_layer_df,
+                                                       delta=0.5,k_auto=k_auto)
+df = data_clusters
+
+print("Scores por feature:", scores)
+print("Ranking de features (mejor → peor):", ranking)
+
+
+
+
+
+
+
+import numpy as np
+import pandas as pd
+
+def rank_features_by_centroid_complexity(
+    df,
+    centroids_dict,
+    host_instance_by_layer_df,
+    delta=0.001,
+    cluster_prefix='cluster_',
+    k_auto=None
+):
+    """
+    Calcula un score por feature basado en el movimiento de centroides y cambio
+    de complejidad de clusters.
+
+    Devuelve:
+        results: dict con:
+            - 'scores_raw': {feature: valor}
+            - 'scores_normalized': {feature: valor}
+            - 'scores_robust': {feature: valor}
+            - 'ranking_raw': [features ordenadas mejor->peor]
+            - 'ranking_normalized': idem
+            - 'ranking_robust': idem
+            - 'details': DataFrame con evolución paso a paso
+    """
+
+    # 1) detectar columnas
+    cluster_cols = [c for c in df.columns if str(c).startswith(cluster_prefix)]
+    cluster_cols = sorted(cluster_cols, key=lambda x: int(str(x).split('_')[1]))
+    feature_cols = [c for c in df.columns if not str(c).startswith(cluster_prefix)]
+    n_features_df = len(feature_cols)
+
+    # 2) limitar por k_auto
+    if k_auto is not None:
+        n_clusters_per_layer = [df[c].nunique() for c in cluster_cols]
+        arr = np.array(n_clusters_per_layer)
+        if (arr == k_auto).any():
+            layer_limit = np.where(arr == k_auto)[0][0] + 1
+            cluster_cols = cluster_cols[:layer_limit]
+        else:
+            raise ValueError(f"No se encontró ninguna capa con {k_auto} clusters en data_clusters.")
+    n_layers = len(cluster_cols)
+    if n_layers < 2:
+        raise ValueError("Se necesitan al menos 2 capas válidas para calcular transiciones.")
+
+    # 3) binarizar complejidad
+    host_bin = (host_instance_by_layer_df >= delta).astype(int)
+
+    # 4) verificar dimensionalidad de centroides
+    sample_layer = min(centroids_dict.keys(), key=lambda x: int(x))
+    sample_centroids = centroids_dict[sample_layer]
+    centroid_dim = np.asarray(sample_centroids).shape[1]
+    if centroid_dim != n_features_df:
+        raise ValueError(
+            f"Mismatch: df tiene {n_features_df} features, centroides tienen {centroid_dim}."
+        )
+
+    # 5) complejidad media por cluster
+    comp_by_cluster = {}
+    for l_idx, col in enumerate(cluster_cols, start=1):
+        comp_by_cluster[l_idx] = host_bin.iloc[:, l_idx-1].groupby(df[col]).mean().to_dict()
+
+    # Inicializar acumuladores
+    scores_raw = np.zeros(n_features_df)
+    scores_robust = np.zeros(n_features_df)
+
+    # Guardar detalle paso a paso
+    records = []
+
+    # 6) recorrer transiciones
+    for l in range(1, n_layers):
+        col_l = f"{cluster_prefix}{l}"
+        col_next = f"{cluster_prefix}{l+1}"
+
+        unique_old = np.unique(df[col_l].dropna())
+        for old_label in unique_old:
+            mask_old = df[col_l] == old_label
+            if not mask_old.any():
+                continue
+            n_points = mask_old.sum()
+
+            new_label = df.loc[mask_old, col_next].iloc[0]
+
+            old_cent = np.asarray(centroids_dict[l][int(old_label)])
+            new_cent = np.asarray(centroids_dict[l+1][int(new_label)])
+            delta_cent = np.abs(new_cent - old_cent)
+
+            c_old = comp_by_cluster[l].get(old_label, 0.0)
+            c_new = comp_by_cluster[l+1].get(new_label, 0.0)
+            delta_comp = float(c_new - c_old)
+
+            # acumular
+            scores_raw += delta_cent * delta_comp
+            scores_robust += delta_cent * delta_comp * n_points
+
+            # guardar detalle
+            rec = {
+                "layer_from": l,
+                "cluster_from": old_label,
+                "cluster_to": new_label,
+                "n_points": n_points,
+                "comp_old": c_old,
+                "comp_new": c_new,
+                "delta_comp": delta_comp,
+            }
+            for f, dval in zip(feature_cols, delta_cent):
+                rec[f"delta_{f}"] = dval
+            records.append(rec)
+
+    # 7) normalización
+    def normalize(vec):
+        denom = np.abs(vec).sum()
+        return vec / denom if denom > 0 else vec
+
+    scores_normalized = normalize(scores_raw)
+
+    # 8) construir outputs legibles
+    scores_raw_dict = {f: float(v) for f, v in zip(feature_cols, scores_raw)}
+    scores_norm_dict = {f: float(v) for f, v in zip(feature_cols, scores_normalized)}
+    scores_robust_dict = {f: float(v) for f, v in zip(feature_cols, scores_robust)}
+
+    ranking_raw = sorted(feature_cols, key=lambda f: scores_raw_dict[f])
+    ranking_norm = sorted(feature_cols, key=lambda f: scores_norm_dict[f])
+    ranking_robust = sorted(feature_cols, key=lambda f: scores_robust_dict[f])
+
+    details_df = pd.DataFrame(records)
+
+    return {
+        "scores_raw": scores_raw_dict,
+        "scores_normalized": scores_norm_dict,
+        "scores_robust": scores_robust_dict,
+        "ranking_raw": ranking_raw,
+        "ranking_normalized": ranking_norm,
+        "ranking_robust": ranking_robust,
+        "details": details_df,
+    }
+
+resultados = rank_features_by_centroid_complexity(
+    data_clusters,
+    centroids_dict,
+    host_instance_by_layer_df,
+    delta=0.5,
+    cluster_prefix='cluster_',
+    k_auto=k_auto)
+aa = resultados['details']
+
+#
+# def plot_feature_evolution(details_df, feature_cols, mode="raw", figsize=(10,6)):
+#     """
+#     Grafica la evolución acumulada de los scores por feature a lo largo de las capas.
+#
+#     Parámetros
+#     ----------
+#     details_df : pd.DataFrame
+#         El 'details' que devuelve rank_features_by_centroid_complexity.
+#     feature_cols : list
+#         Lista de nombres de las columnas de features (ej: [0,1] o ['x1','x2']).
+#     mode : str
+#         "raw"      = score = Δcent * Δcomp
+#         "robust"   = score = Δcent * Δcomp * n_points
+#         "sqrt"     = score = Δcent * Δcomp * sqrt(n_points) (intermedio)
+#     figsize : tuple
+#         Tamaño de la figura.
+#     """
+#     # Calcular contribuciones por transición y feature
+#     contribs = []
+#     for _, row in details_df.iterrows():
+#         for f in feature_cols:
+#             delta_val = row[f"delta_{f}"]
+#             if mode == "raw":
+#                 score = delta_val * row["delta_comp"]
+#             elif mode == "robust":
+#                 score = delta_val * row["delta_comp"] * row["n_points"]
+#             elif mode == "sqrt":
+#                 score = delta_val * row["delta_comp"] * np.sqrt(row["n_points"])
+#             else:
+#                 raise ValueError("mode debe ser 'raw', 'robust' o 'sqrt'")
+#             contribs.append({
+#                 "layer_from": row["layer_from"],
+#                 "feature": f,
+#                 "score": score
+#             })
+#     contribs = pd.DataFrame(contribs)
+#
+#     # Agrupar por capa y feature
+#     grouped = contribs.groupby(["layer_from","feature"])["score"].sum().reset_index()
+#
+#     # Hacer acumulado por feature a lo largo de las capas
+#     grouped["cum_score"] = grouped.groupby("feature")["score"].cumsum()
+#
+#     # Plot
+#     plt.figure(figsize=figsize)
+#     for f in feature_cols:
+#         df_f = grouped[grouped["feature"] == f]
+#         plt.plot(df_f["layer_from"], df_f["cum_score"], marker="o", label=str(f))
+#
+#     plt.axhline(0, color="k", linestyle="--", linewidth=1)
+#     plt.xlabel("Capa (origen de transición)")
+#     plt.ylabel(f"Score acumulado ({mode})")
+#     plt.title(f"Evolución acumulada de scores por feature ({mode})")
+#     plt.legend()
+#     plt.show()
+#
+#
+# details = resultados["details"]
+# feature_cols = [c for c in details.columns if c.startswith("delta_")]
+# feature_cols = [c.replace("delta_", "") for c in feature_cols]
+#
+# # Evolución raw
+# plot_feature_evolution(details, feature_cols, mode="raw")
+#
+# # Evolución robust
+# plot_feature_evolution(details, feature_cols, mode="robust")
+#
+# # Evolución intermedia sqrt
+# plot_feature_evolution(details, feature_cols, mode="sqrt")
