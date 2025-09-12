@@ -154,11 +154,6 @@ def all_measures(data,save_csv,path_to_save, name_data):
 # X = predict_students_dropout_and_academic_success.data.features
 # y = predict_students_dropout_and_academic_success.data.targets
 #
-# # metadata
-# print(predict_students_dropout_and_academic_success.metadata)
-#
-# # variable information
-# print(predict_students_dropout_and_academic_success.variables)
 #
 # df_final = pd.concat([X, y], axis=1)
 # df_final = df_final.rename(columns={"Target": "y"})
@@ -170,6 +165,6 @@ def all_measures(data,save_csv,path_to_save, name_data):
 # path_to_save = 'ccc'
 # name_data = 'drop'
 # df_measures, df_classes_dataset, extra_results_host = all_measures(data, save_csv, path_to_save, name_data)
-#
+
 
 
